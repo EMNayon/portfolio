@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en" x-data="portfolioApp()" x-init="init()" :class="{ 'light-mode': lightMode }">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Emran | Laravel Developer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<style>
+:root {
+  --bg:#050a0e; --bg2:#0a1018; --surface:#0d1620;
+  --border:rgba(0,210,180,0.15); --accent:#00d2b4; --accent2:#00aaff;
+  --text:#c8d8e4; --muted:#506070;
+  --glow:0 0 20px rgba(0,210,180,0.35);
+  --shadow:0 8px 40px rgba(0,0,0,0.5);
+  --font-mono:'Share Tech Mono',monospace;
+  --font-sans:'Syne',sans-serif;
+  --trans:0.35s cubic-bezier(0.4,0,0.2,1);
+}
+.light-mode {
+  --bg:#f0f4f8; --bg2:#e4ecf3; --surface:#ffffff;
+  --border:rgba(0,160,140,0.2); --accent:#009e88; --accent2:#0077cc;
+  --text:#1a2a38; --muted:#6a8090;
+  --glow:0 0 20px rgba(0,160,140,0.25);
+  --shadow:0 8px 40px rgba(0,0,0,0.1);
+}
+.light-mode #bg-canvas { opacity:0.2; }
+.light-mode body::after { opacity:0.05; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);overflow-x:hidden;transition:background var(--trans),color var(--trans);cursor:none;}
+::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-track{background:var(--bg);} ::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px;}
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;transition:opacity var(--trans);}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:1;opacity:0.4;transition:opacity var(--trans);}
+main{position:relative;z-index:2;}
+
+/* CURSOR */
+.cursor-dot{position:fixed;width:8px;height:8px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:background var(--trans);}
+.cursor-ring{position:fixed;width:36px;height:36px;border:1px solid rgba(0,210,180,0.5);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width 0.2s,height 0.2s,opacity 0.2s,border-color var(--trans);}
+
+/* SCROLL PROGRESS */
+#scroll-progress{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));z-index:999;width:0%;transition:width 0.08s;}
+
+/* THEME TOGGLE */
+.theme-toggle{position:fixed;bottom:2rem;right:2rem;width:50px;height:50px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--accent);font-size:1.2rem;display:flex;align-items:center;justify-content:center;cursor:none;z-index:100;box-shadow:var(--shadow);transition:background var(--trans),border-color var(--trans),transform 0.3s,box-shadow 0.3s;}
+.theme-toggle:hover{transform:scale(1.1) rotate(20deg);box-shadow:var(--glow);}
+
+/* BACK TO TOP */
+#back-top{position:fixed;bottom:2rem;left:2rem;width:50px;height:50px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--accent);font-size:1.1rem;display:flex;align-items:center;justify-content:center;cursor:none;z-index:100;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity 0.3s,transform 0.3s,background var(--trans);}
+#back-top.show{opacity:1;pointer-events:all;}
+#back-top:hover{transform:translateY(-4px);box-shadow:var(--glow);}
+
+/* NAV */
+.navbar-custom{background:rgba(5,10,14,0.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:1rem 0;transition:background var(--trans),border-color var(--trans);}
+.light-mode .navbar-custom{background:rgba(240,244,248,0.92);}
+.navbar-brand{font-family:var(--font-mono);color:var(--accent)!important;font-size:1.2rem;letter-spacing:2px;cursor:none;}
+.navbar-brand span{color:var(--text);}
+.nav-link-custom{color:var(--muted)!important;font-family:var(--font-mono);font-size:0.82rem;letter-spacing:1.5px;text-transform:uppercase;padding:0.5rem 1rem!important;transition:color 0.25s;position:relative;cursor:none;}
+.nav-link-custom::after{content:'';position:absolute;bottom:0;left:50%;right:50%;height:1px;background:var(--accent);transition:left 0.25s,right 0.25s;}
+.nav-link-custom:hover,.nav-link-custom.active{color:var(--accent)!important;}
+.nav-link-custom:hover::after,.nav-link-custom.active::after{left:1rem;right:1rem;}
+.navbar-toggler{border:0!important;box-shadow:none!important;cursor:none;padding:0.4rem;}
+.ham-icon{display:flex;flex-direction:column;gap:5px;width:24px;}
+.ham-icon span{display:block;height:2px;background:var(--accent);border-radius:2px;transition:transform 0.35s,opacity 0.35s,width 0.35s;}
+.ham-icon span:nth-child(2){width:65%;}
+.ham-open .ham-icon span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.ham-open .ham-icon span:nth-child(2){opacity:0;transform:scaleX(0);}
+.ham-open .ham-icon span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+
+/* HERO */
+#hero{min-height:100vh;display:flex;align-items:center;padding:6rem 0 4rem;}
+.hero-tag{font-family:var(--font-mono);color:var(--accent);font-size:0.85rem;letter-spacing:3px;text-transform:uppercase;opacity:0;animation:fadeSlideUp 0.7s 0.2s forwards;}
+.hero-name{font-size:clamp(3rem,8vw,6.5rem);font-weight:800;line-height:1;letter-spacing:-2px;color:#fff;opacity:0;animation:fadeSlideUp 0.7s 0.4s forwards;}
+.light-mode .hero-name{color:var(--text);}
+.glitch{position:relative;display:inline-block;color:var(--accent);}
+.glitch::before,.glitch::after{content:attr(data-text);position:absolute;top:0;left:0;width:100%;height:100%;color:var(--accent);}
+.glitch::before{animation:glitch1 4s infinite;clip-path:polygon(0 30%,100% 30%,100% 50%,0 50%);text-shadow:-2px 0 #ff0060;}
+.glitch::after{animation:glitch2 4s infinite;clip-path:polygon(0 60%,100% 60%,100% 80%,0 80%);text-shadow:2px 0 #00aaff;}
+.hero-role{font-family:var(--font-mono);font-size:clamp(1rem,2vw,1.3rem);color:var(--text);opacity:0;animation:fadeSlideUp 0.7s 0.6s forwards;}
+.hero-desc{color:var(--muted);max-width:480px;line-height:1.75;opacity:0;animation:fadeSlideUp 0.7s 0.8s forwards;}
+.hero-cta{opacity:0;animation:fadeSlideUp 0.7s 1s forwards;}
+.hero-stats{opacity:0;animation:fadeSlideUp 0.7s 1.2s forwards;}
+.stat-item{border-left:2px solid var(--accent);padding-left:1rem;}
+.stat-num{font-size:2rem;font-weight:800;color:#fff;line-height:1;}
+.light-mode .stat-num{color:var(--text);}
+.stat-label{font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.btn-primary-custom{background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:var(--font-mono);font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;padding:0.75rem 2rem;cursor:none;transition:background 0.25s,box-shadow 0.25s,color 0.25s;}
+.btn-primary-custom:hover{background:var(--accent);color:var(--bg);box-shadow:var(--glow);}
+.btn-secondary-custom{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--font-mono);font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;padding:0.75rem 2rem;cursor:none;transition:border-color 0.25s,color 0.25s;}
+.btn-secondary-custom:hover{border-color:var(--accent2);color:var(--accent2);}
+.hero-img-wrap{position:relative;opacity:0;animation:fadeIn 1s 0.6s forwards;}
+.hero-img-frame{width:300px;height:300px;border:1px solid var(--accent);position:absolute;top:20px;left:20px;z-index:-1;}
+.hero-img-frame2{width:300px;height:300px;border:1px solid var(--border);position:absolute;top:-20px;left:-20px;z-index:-1;}
+.avatar-placeholder{width:300px;height:300px;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);color:var(--muted);font-family:var(--font-mono);font-size:0.8rem;letter-spacing:2px;transition:background var(--trans),border-color var(--trans);}
+.avatar-placeholder i{font-size:4rem;margin-bottom:1rem;color:var(--accent);opacity:0.4;}
+
+/* SECTIONS */
+section{padding:6rem 0;transition:background var(--trans);}
+.section-tag{font-family:var(--font-mono);font-size:0.75rem;color:var(--accent);letter-spacing:4px;text-transform:uppercase;margin-bottom:0.5rem;}
+.section-title{font-size:clamp(2rem,4vw,3rem);font-weight:800;color:#fff;letter-spacing:-1px;line-height:1.1;}
+.light-mode .section-title{color:var(--text);}
+.section-line{width:60px;height:2px;background:linear-gradient(90deg,var(--accent),transparent);margin:1.5rem 0;}
+.reveal{opacity:0;transform:translateY(30px);transition:opacity 0.7s,transform 0.7s;}
+.reveal.visible{opacity:1;transform:translateY(0);}
+.tilt-card{transform-style:preserve-3d;will-change:transform;}
+
+/* ABOUT */
+#about{background:var(--bg2);}
+.about-card{background:var(--surface);border:1px solid var(--border);padding:2rem;border-radius:2px;transition:background var(--trans),border-color var(--trans);}
+.about-card-label{font-family:var(--font-mono);font-size:0.7rem;color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:0.5rem;}
+.about-card-value{color:#fff;font-weight:600;}
+.light-mode .about-card-value{color:var(--text);}
+.terminal-block{background:#020609;border:1px solid var(--border);border-radius:2px;padding:1.5rem;font-family:var(--font-mono);font-size:0.85rem;}
+.light-mode .terminal-block{background:#1a2a38;}
+.terminal-header{display:flex;gap:6px;margin-bottom:1rem;}
+.dot{width:12px;height:12px;border-radius:50%;} .dot-r{background:#ff5f57;} .dot-y{background:#febc2e;} .dot-g{background:#28c840;}
+.terminal-line{color:var(--muted);margin-bottom:0.3rem;}
+.terminal-line .cmd{color:var(--accent);} .terminal-line .val{color:#7dd3fc;} .terminal-line .str{color:#a5f3c3;}
+
+/* SERVICES */
+#services{background:var(--bg);}
+.service-card{background:var(--surface);border:1px solid var(--border);padding:2.5rem 2rem;border-radius:2px;height:100%;position:relative;overflow:hidden;transition:border-color 0.3s,transform 0.3s,box-shadow 0.3s,background var(--trans);}
+.service-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));transform:scaleX(0);transform-origin:left;transition:transform 0.35s;}
+.service-card:hover::before{transform:scaleX(1);}
+.service-card:hover{border-color:rgba(0,210,180,0.4);transform:translateY(-6px);box-shadow:var(--shadow);}
+.service-icon{width:56px;height:56px;border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--accent);margin-bottom:1.5rem;transition:background 0.3s,color 0.3s;}
+.service-card:hover .service-icon{background:var(--accent);color:var(--bg);}
+.service-title{font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:0.75rem;}
+.light-mode .service-title{color:var(--text);}
+.service-desc{color:var(--muted);font-size:0.9rem;line-height:1.7;}
+
+/* SKILLS */
+#skills{background:var(--bg2);}
+.skill-category{background:var(--surface);border:1px solid var(--border);padding:2rem;border-radius:2px;height:100%;transition:border-color 0.3s,transform 0.3s,background var(--trans);}
+.skill-category:hover{border-color:var(--accent);transform:translateY(-4px);}
+.skill-cat-title{font-family:var(--font-mono);font-size:0.8rem;color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:1.5rem;}
+.skill-badge{display:inline-flex;align-items:center;gap:0.4rem;background:rgba(0,210,180,0.06);border:1px solid rgba(0,210,180,0.2);color:var(--text);font-family:var(--font-mono);font-size:0.78rem;padding:0.35rem 0.75rem;border-radius:2px;margin:0.25rem;transition:background 0.2s,border-color 0.2s,color 0.2s;cursor:none;}
+.skill-badge:hover{background:rgba(0,210,180,0.15);border-color:var(--accent);color:var(--accent);}
+.dot-s{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+.skill-bar-wrap{margin-bottom:1rem;}
+.skill-bar-label{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.78rem;color:var(--text);margin-bottom:0.4rem;}
+.skill-bar-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.skill-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;width:0;transition:width 1.5s cubic-bezier(0.4,0,0.2,1);}
+
+/* PROJECTS */
+#projects{background:var(--bg);}
+.project-card{background:var(--surface);border:1px solid var(--border);border-radius:2px;overflow:hidden;height:100%;transition:border-color 0.3s,transform 0.3s,box-shadow 0.3s,background var(--trans);position:relative;}
+.project-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));transform:scaleX(0);transform-origin:left;transition:transform 0.35s;}
+.project-card:hover::before{transform:scaleX(1);}
+.project-card:hover{border-color:rgba(0,210,180,0.4);transform:translateY(-6px);box-shadow:var(--shadow);}
+.project-thumb{height:180px;background:linear-gradient(135deg,#0a1520 0%,#0d2030 100%);display:flex;align-items:center;justify-content:center;font-size:3.5rem;position:relative;overflow:hidden;}
+.light-mode .project-thumb{background:linear-gradient(135deg,#dce8f3,#c8d8e8);}
+.project-thumb::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,var(--surface));}
+.project-body{padding:1.5rem;}
+.project-tag{display:inline-block;font-family:var(--font-mono);font-size:0.68rem;color:var(--accent);border:1px solid rgba(0,210,180,0.3);padding:0.15rem 0.5rem;border-radius:1px;margin-right:0.4rem;margin-bottom:0.3rem;}
+.project-title{font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:0.5rem;}
+.light-mode .project-title{color:var(--text);}
+.project-desc{font-size:0.9rem;color:var(--muted);line-height:1.6;margin-bottom:1.25rem;}
+.project-links a{color:var(--muted);font-family:var(--font-mono);font-size:0.78rem;text-decoration:none;margin-right:1rem;letter-spacing:1px;transition:color 0.2s;cursor:none;}
+.project-links a:hover{color:var(--accent);}
+
+/* EXPERIENCE */
+#experience{background:var(--bg2);}
+.timeline{position:relative;padding-left:2rem;}
+.timeline::before{content:'';position:absolute;left:0;top:0;bottom:0;width:1px;background:linear-gradient(180deg,var(--accent),transparent);}
+.timeline-item{position:relative;margin-bottom:3rem;opacity:0;transform:translateX(-20px);transition:opacity 0.6s,transform 0.6s;}
+.timeline-item.visible{opacity:1;transform:translateX(0);}
+.timeline-item::before{content:'';position:absolute;left:-2.4rem;top:0.4rem;width:10px;height:10px;border-radius:50%;background:var(--bg);border:2px solid var(--accent);box-shadow:0 0 10px rgba(0,210,180,0.5);}
+.tl-date{font-family:var(--font-mono);font-size:0.75rem;color:var(--accent);letter-spacing:2px;margin-bottom:0.25rem;}
+.tl-role{font-size:1.1rem;font-weight:700;color:#fff;}
+.light-mode .tl-role{color:var(--text);}
+.tl-company{color:var(--muted);font-size:0.9rem;margin-bottom:0.75rem;}
+.tl-desc{color:var(--muted);font-size:0.9rem;line-height:1.7;}
+
+/* TESTIMONIALS */
+#testimonials{background:var(--bg);}
+.testimonial-card{background:var(--surface);border:1px solid var(--border);padding:2rem;border-radius:2px;height:100%;position:relative;transition:border-color 0.3s,transform 0.3s,background var(--trans);}
+.testimonial-card:hover{border-color:var(--accent);transform:translateY(-4px);}
+.testimonial-card::before{content:'\201C';font-size:5rem;line-height:1;color:var(--accent);opacity:0.12;position:absolute;top:1rem;left:1.5rem;font-family:Georgia,serif;}
+.testimonial-text{color:var(--muted);line-height:1.8;margin-bottom:1.5rem;font-size:0.95rem;}
+.testimonial-author{display:flex;align-items:center;gap:1rem;}
+.author-avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--bg);font-size:1rem;flex-shrink:0;}
+.author-name{font-weight:700;color:#fff;font-size:0.95rem;}
+.light-mode .author-name{color:var(--text);}
+.author-role{font-family:var(--font-mono);font-size:0.72rem;color:var(--muted);letter-spacing:1px;}
+.stars{color:#fbbf24;font-size:0.85rem;margin-bottom:0.25rem;}
+
+/* BLOG */
+#blog{background:var(--bg2);}
+.blog-card{background:var(--surface);border:1px solid var(--border);border-radius:2px;overflow:hidden;height:100%;transition:border-color 0.3s,transform 0.3s,box-shadow 0.3s,background var(--trans);position:relative;}
+.blog-card:hover{border-color:rgba(0,210,180,0.4);transform:translateY(-5px);box-shadow:var(--shadow);}
+.blog-thumb{height:160px;position:relative;overflow:hidden;background:linear-gradient(135deg,#0a1520,#0d2030);display:flex;align-items:center;justify-content:center;font-size:3rem;}
+.light-mode .blog-thumb{background:linear-gradient(135deg,#dce8f3,#c8d8e8);}
+.blog-body{padding:1.5rem;}
+.blog-meta{display:flex;gap:1rem;font-family:var(--font-mono);font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem;flex-wrap:wrap;}
+.blog-cat{color:var(--accent);}
+.blog-title{font-size:1rem;font-weight:700;color:#fff;margin-bottom:0.5rem;line-height:1.4;}
+.light-mode .blog-title{color:var(--text);}
+.blog-excerpt{font-size:0.88rem;color:var(--muted);line-height:1.65;margin-bottom:1rem;}
+.blog-read{font-family:var(--font-mono);font-size:0.78rem;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;transition:gap 0.2s;cursor:none;}
+.blog-read:hover{gap:0.8rem;color:var(--accent);}
+
+/* CONTACT */
+#contact{background:var(--bg);}
+.contact-form-wrap{background:var(--surface);border:1px solid var(--border);padding:3rem;border-radius:2px;transition:background var(--trans),border-color var(--trans);}
+.form-label-custom{font-family:var(--font-mono);font-size:0.75rem;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:0.4rem;display:block;}
+.form-control-custom{width:100%;background:#020609;border:1px solid var(--border);border-radius:2px;color:var(--text);font-family:var(--font-mono);font-size:0.9rem;padding:0.75rem 1rem;transition:border-color 0.25s,box-shadow 0.25s,background var(--trans);}
+.light-mode .form-control-custom{background:var(--bg2);}
+.form-control-custom:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,210,180,0.1);color:var(--text);}
+.form-control-custom::placeholder{color:var(--muted);}
+textarea.form-control-custom{resize:vertical;min-height:130px;}
+.contact-info-item{display:flex;align-items:center;gap:1rem;padding:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:2px;margin-bottom:1rem;transition:border-color 0.25s,background var(--trans);}
+.contact-info-item:hover{border-color:var(--accent);}
+.contact-icon{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border:1px solid var(--accent);color:var(--accent);font-size:1.1rem;flex-shrink:0;}
+.contact-label{font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.contact-val{color:var(--text);font-size:0.95rem;}
+.social-links a{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid var(--border);color:var(--muted);font-size:1rem;text-decoration:none;cursor:none;transition:border-color 0.25s,color 0.25s,box-shadow 0.25s;margin-right:0.5rem;}
+.social-links a:hover{border-color:var(--accent);color:var(--accent);box-shadow:var(--glow);}
+
+/* FOOTER */
+footer{background:var(--bg);border-top:1px solid var(--border);padding:2rem 0;font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);transition:background var(--trans),border-color var(--trans);}
+footer a{color:var(--muted);text-decoration:none;cursor:none;transition:color 0.2s;}
+footer a:hover{color:var(--accent);}
+
+/* KEYFRAMES */
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes blink{50%{opacity:0}}
+@keyframes glitch1{0%,93%{transform:none;opacity:1}94%{transform:translate(-3px,1px) skewX(3deg);opacity:0.8}95%{transform:translate(3px,-1px) skewX(-3deg);opacity:0.6}96%{transform:translate(-1px,2px);opacity:0.9}100%{transform:none;opacity:1}}
+@keyframes glitch2{0%,95%{transform:none;opacity:1}96%{transform:translate(3px,1px) skewX(-5deg);opacity:0.7}97%{transform:translate(-3px,-2px) skewX(5deg);opacity:0.5}98%{transform:none;opacity:1}}
+
+/* MOBILE */
+@media(max-width:991px){
+  .hero-img-wrap{display:none;}
+  .contact-form-wrap{padding:1.5rem;}
+  .navbar-collapse{background:rgba(5,10,14,0.97);padding:1.5rem;margin-top:0.5rem;border:1px solid var(--border);border-radius:2px;}
+  .light-mode .navbar-collapse{background:rgba(240,244,248,0.98);}
+}
+@media(max-width:576px){
+  section{padding:4rem 0;}
+  .hero-name{letter-spacing:-1px;}
+  .theme-toggle,.#back-top{bottom:1rem;right:1rem;width:42px;height:42px;font-size:1rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div id="scroll-progress"></div>
+<canvas id="bg-canvas"></canvas>
+
+<button class="theme-toggle" @click="lightMode=!lightMode">
+  <i class="bi" :class="lightMode?'bi-moon-fill':'bi-sun-fill'"></i>
+</button>
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  <i class="bi bi-arrow-up"></i>
+</button>
+
+<main>
+
+<!-- NAV -->
+<nav class="navbar navbar-expand-lg navbar-custom fixed-top" id="mainNav">
+  <div class="container">
+    <a class="navbar-brand" href="#">&lt;<span>Emran</span> /&gt;</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" @click="navOpen=!navOpen" :class="{'ham-open':navOpen}">
+      <div class="ham-icon"><span></span><span></span><span></span></div>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navMenu">
+      <ul class="navbar-nav gap-1">
+        <li class="nav-item"><a class="nav-link-custom nav-link" href="#about">About</a></li>
+        <li class="nav-item"><a class="nav-link-custom nav-link" href="#services">Services</a></li>
+        <li class="nav-item"><a class="nav-link-custom nav-link" href="#skills">Skills</a></li>
+        <li class="nav-item"><a class="nav-link-custom nav-link" href="#projects">Projects</a></li>
+        <li class="nav-item"><a class="nav-link-custom nav-link" href="#experience">Experience</a></li>
+        <li class="nav-item"><a class="nav-link-custom nav-link" href="#testimonials">Reviews</a></li>
+        <li class="nav-item"><a class="nav-link-custom nav-link" href="#blog">Blog</a></li>
+        <li class="nav-item"><a class="nav-link-custom nav-link" href="#contact">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="container">
+    <div class="row align-items-center gy-5">
+      <div class="col-lg-7" data-parallax="0.07">
+        <div class="hero-tag mb-3">// Available for hire &nbsp;<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);animation:blink 1.5s infinite;vertical-align:middle"></span></div>
+        <h1 class="hero-name mb-3">Hi, I'm<br><span class="glitch" data-text="Emran">Emran</span></h1>
+        <div class="hero-role mb-4">
+          <span id="typedText"></span><span style="display:inline-block;width:2px;height:1.1em;background:var(--accent);margin-left:3px;vertical-align:middle;animation:blink 1s step-end infinite"></span>
+        </div>
+        <p class="hero-desc mb-4">Crafting robust, scalable web applications with Laravel & PHP. Passionate about clean architecture, elegant APIs, and turning complex problems into simple solutions.</p>
+        <div class="hero-cta d-flex flex-wrap gap-3 mb-5">
+          <a href="#projects" class="btn btn-primary-custom btn-magnetic"><i class="bi bi-grid-3x3-gap me-2"></i>View Projects</a>
+          <a href="#contact" class="btn btn-secondary-custom btn-magnetic"><i class="bi bi-send me-2"></i>Get In Touch</a>
+        </div>
+        <div class="hero-stats d-flex flex-wrap gap-4">
+          <div class="stat-item"><div class="stat-num" x-text="counters.projects+'+'">0</div><div class="stat-label">Projects</div></div>
+          <div class="stat-item"><div class="stat-num" x-text="counters.years+'+'">0</div><div class="stat-label">Years Exp.</div></div>
+          <div class="stat-item"><div class="stat-num" x-text="counters.clients+'+'">0</div><div class="stat-label">Clients</div></div>
+        </div>
+      </div>
+      <div class="col-lg-5 d-flex justify-content-center justify-content-lg-end">
+        <div class="hero-img-wrap" data-parallax="0.03">
+          <div class="hero-img-frame2"></div> 
+          <div class="avatar-placeholder"><img src="nayon2.jpg" alt="" style="width:100%; height: auto; object-fit: cover;"></div>
+          <div class="hero-img-frame"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="container">
+    <div class="row gy-5">
+      <div class="col-lg-6 reveal">
+        <div class="section-tag">// about me</div>
+        <h2 class="section-title">Who I Am</h2>
+        <div class="section-line"></div>
+        <p class="mb-3" style="color:var(--muted);line-height:1.8">I'm a passionate <strong style="color:var(--text)">Laravel Developer</strong> with a love for building production-ready web applications. I specialize in backend development, RESTful API design, payment gateway integration, and scalable architecture.</p>
+        <p class="mb-4" style="color:var(--muted);line-height:1.8">Currently working on a <strong style="color:var(--accent)">Laravel Enrollment Package</strong> with SSLCommerz payment integration, admin panel, and course management — aiming to publish on Packagist.</p>
+        <div class="social-links">
+          <a href="#"><i class="bi bi-github"></i></a>
+          <a href="#"><i class="bi bi-linkedin"></i></a>
+          <a href="#"><i class="bi bi-twitter-x"></i></a>
+          <a href="#"><i class="bi bi-envelope-fill"></i></a>
+        </div>
+      </div>
+      <div class="col-lg-6 reveal">
+        <div class="terminal-block mb-4 tilt-card">
+          <div class="terminal-header"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+          <div class="terminal-line"><span class="cmd">$</span> <span class="val">whoami</span></div>
+          <div class="terminal-line" style="color:#fff">Emran — Laravel Developer</div><br>
+          <div class="terminal-line"><span class="cmd">$</span> <span class="val">cat</span> info.json</div>
+          <div class="terminal-line">{</div>
+          <div class="terminal-line">&nbsp; <span class="cmd">"name"</span>: <span class="str">"Emran"</span>,</div>
+          <div class="terminal-line">&nbsp; <span class="cmd">"role"</span>: <span class="str">"Laravel Developer"</span>,</div>
+          <div class="terminal-line">&nbsp; <span class="cmd">"location"</span>: <span class="str">"Bangladesh"</span>,</div>
+          <div class="terminal-line">&nbsp; <span class="cmd">"stack"</span>: [<span class="str">"Laravel"</span>, <span class="str">"PHP"</span>, <span class="str">"MySQL"</span>],</div>
+          <div class="terminal-line">&nbsp; <span class="cmd">"available"</span>: <span style="color:#fbbf24">true</span></div>
+          <div class="terminal-line">}</div><br>
+          <div class="terminal-line"><span class="cmd">$</span> <span style="display:inline-block;width:8px;height:14px;background:var(--accent);vertical-align:middle;animation:blink 1s infinite"></span></div>
+        </div>
+        <div class="row g-3">
+          <div class="col-6"><div class="about-card tilt-card"><div class="about-card-label">Location</div><div class="about-card-value">Bangladesh 🇧🇩</div></div></div>
+          <div class="col-6"><div class="about-card tilt-card"><div class="about-card-label">Status</div><div class="about-card-value" style="color:var(--accent)">● Open to Work</div></div></div>
+          <div class="col-6"><div class="about-card tilt-card"><div class="about-card-label">Specialty</div><div class="about-card-value">Laravel / PHP</div></div></div>
+          <div class="col-6"><div class="about-card tilt-card"><div class="about-card-label">Education</div><div class="about-card-value">CS / IT Degree</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section id="services">
+  <div class="container">
+    <div class="text-center mb-5 reveal">
+      <div class="section-tag">// what i do</div>
+      <h2 class="section-title">Services</h2>
+    </div>
+    <div class="row g-4">
+      <div class="col-lg-4 col-md-6 reveal"><div class="service-card tilt-card"><div class="service-icon"><i class="bi bi-server"></i></div><div class="service-title">Backend Development</div><p class="service-desc">Robust Laravel & PHP backends with clean MVC architecture, Eloquent ORM, queue systems, and event-driven design patterns.</p></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="service-card tilt-card"><div class="service-icon"><i class="bi bi-cloud-arrow-up"></i></div><div class="service-title">REST API Design</div><p class="service-desc">Scalable RESTful APIs with Sanctum/Passport auth, resource transformers, versioning, rate limiting & full documentation.</p></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="service-card tilt-card"><div class="service-icon"><i class="bi bi-credit-card"></i></div><div class="service-title">Payment Integration</div><p class="service-desc">Seamless payment gateway integration — SSLCommerz, Stripe, bKash. Secure transactions with webhook handling and refund flows.</p></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="service-card tilt-card"><div class="service-icon"><i class="bi bi-layout-text-window"></i></div><div class="service-title">Full-Stack Web Apps</div><p class="service-desc">End-to-end web applications combining Laravel backend with Blade, Bootstrap & Alpine.js frontend for rich user experiences.</p></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="service-card tilt-card"><div class="service-icon"><i class="bi bi-box-seam"></i></div><div class="service-title">Laravel Packages</div><p class="service-desc">Custom Laravel packages following best practices — service providers, facades, migrations, configs and Packagist publishing.</p></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="service-card tilt-card"><div class="service-icon"><i class="bi bi-speedometer2"></i></div><div class="service-title">Performance Optimization</div><p class="service-desc">Query optimization, caching strategies (Redis), N+1 prevention, eager loading, and database indexing for blazing-fast apps.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills">
+  <div class="container">
+    <div class="text-center mb-5 reveal">
+      <div class="section-tag">// my toolkit</div>
+      <h2 class="section-title">Skills & Technologies</h2>
+    </div>
+    <div class="row g-4 mb-5">
+      <div class="col-md-4 reveal"><div class="skill-category tilt-card"><div class="skill-cat-title"><i class="bi bi-server me-2"></i>Backend</div><div><span class="skill-badge"><span class="dot-s"></span>Laravel 12</span><span class="skill-badge"><span class="dot-s"></span>PHP 8.x</span><span class="skill-badge"><span class="dot-s"></span>REST API</span><span class="skill-badge"><span class="dot-s"></span>Eloquent ORM</span><span class="skill-badge"><span class="dot-s"></span>Sanctum</span><span class="skill-badge"><span class="dot-s"></span>Queues</span><span class="skill-badge"><span class="dot-s"></span>Events</span><span class="skill-badge"><span class="dot-s"></span>Artisan CLI</span></div></div></div>
+      <div class="col-md-4 reveal"><div class="skill-category tilt-card"><div class="skill-cat-title"><i class="bi bi-layout-text-window me-2"></i>Frontend</div><div><span class="skill-badge"><span class="dot-s"></span>Blade</span><span class="skill-badge"><span class="dot-s"></span>Bootstrap 5</span><span class="skill-badge"><span class="dot-s"></span>Alpine.js</span><span class="skill-badge"><span class="dot-s"></span>JavaScript</span><span class="skill-badge"><span class="dot-s"></span>Three.js</span><span class="skill-badge"><span class="dot-s"></span>Tailwind CSS</span><span class="skill-badge"><span class="dot-s"></span>CSS Animations</span><span class="skill-badge"><span class="dot-s"></span>HTML5/CSS3</span></div></div></div>
+      <div class="col-md-4 reveal"><div class="skill-category tilt-card"><div class="skill-cat-title"><i class="bi bi-tools me-2"></i>DevOps & Tools</div><div><span class="skill-badge"><span class="dot-s"></span>MySQL</span><span class="skill-badge"><span class="dot-s"></span>Git / GitHub</span><span class="skill-badge"><span class="dot-s"></span>Composer</span><span class="skill-badge"><span class="dot-s"></span>SSLCommerz</span><span class="skill-badge"><span class="dot-s"></span>Shared Hosting</span><span class="skill-badge"><span class="dot-s"></span>Nginx</span><span class="skill-badge"><span class="dot-s"></span>Packagist</span><span class="skill-badge"><span class="dot-s"></span>Linux CLI</span></div></div></div>
+    </div>
+    <div class="row g-4">
+      <div class="col-lg-6 reveal"><div class="about-card">
+        <div class="section-tag mb-3">// proficiency</div>
+        <div class="skill-bar-wrap"><div class="skill-bar-label"><span>Laravel / PHP</span><span>92%</span></div><div class="skill-bar-track"><div class="skill-bar-fill" data-width="92"></div></div></div>
+        <div class="skill-bar-wrap"><div class="skill-bar-label"><span>MySQL</span><span>85%</span></div><div class="skill-bar-track"><div class="skill-bar-fill" data-width="85"></div></div></div>
+        <div class="skill-bar-wrap"><div class="skill-bar-label"><span>REST API Design</span><span>88%</span></div><div class="skill-bar-track"><div class="skill-bar-fill" data-width="88"></div></div></div>
+        <div class="skill-bar-wrap"><div class="skill-bar-label"><span>JavaScript / Alpine</span><span>75%</span></div><div class="skill-bar-track"><div class="skill-bar-fill" data-width="75"></div></div></div>
+        <div class="skill-bar-wrap"><div class="skill-bar-label"><span>Bootstrap / CSS</span><span>82%</span></div><div class="skill-bar-track"><div class="skill-bar-fill" data-width="82"></div></div></div>
+      </div></div>
+      <div class="col-lg-6 reveal"><div class="about-card" style="height:100%">
+        <div class="section-tag mb-3">// currently learning</div>
+        <div class="d-flex flex-wrap gap-2">
+          <span class="skill-badge" style="border-color:rgba(0,170,255,0.4);color:var(--accent2)"><i class="bi bi-arrow-up-circle me-1"></i>Livewire 3</span>
+          <span class="skill-badge" style="border-color:rgba(0,170,255,0.4);color:var(--accent2)"><i class="bi bi-arrow-up-circle me-1"></i>Vue.js 3</span>
+          <span class="skill-badge" style="border-color:rgba(0,170,255,0.4);color:var(--accent2)"><i class="bi bi-arrow-up-circle me-1"></i>Docker</span>
+          <span class="skill-badge" style="border-color:rgba(0,170,255,0.4);color:var(--accent2)"><i class="bi bi-arrow-up-circle me-1"></i>Redis</span>
+          <span class="skill-badge" style="border-color:rgba(0,170,255,0.4);color:var(--accent2)"><i class="bi bi-arrow-up-circle me-1"></i>GraphQL</span>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PROJECTS -->
+<section id="projects">
+  <div class="container">
+    <div class="text-center mb-5 reveal"><div class="section-tag">// my work</div><h2 class="section-title">Featured Projects</h2></div>
+    <div class="row g-4">
+      <div class="col-lg-4 col-md-6 reveal"><div class="project-card tilt-card"><div class="project-thumb">🎓</div><div class="project-body"><div class="project-tags"><span class="project-tag">Laravel</span><span class="project-tag">SSLCommerz</span><span class="project-tag">MySQL</span></div><div class="project-title">Laravel Enrollment Package</div><p class="project-desc">Full-featured enrollment package with student registration, course management, payment & admin panel.</p><div class="project-links"><a href="#"><i class="bi bi-github"></i>GitHub</a><a href="#"><i class="bi bi-box-arrow-up-right"></i>Live</a></div></div></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="project-card tilt-card"><div class="project-thumb">🏥</div><div class="project-body"><div class="project-tags"><span class="project-tag">Laravel</span><span class="project-tag">PHP</span><span class="project-tag">Blade</span></div><div class="project-title">Healix Prime</div><p class="project-desc">Live healthcare platform with appointment management, authentication & medical dashboard on shared hosting.</p><div class="project-links"><a href="#"><i class="bi bi-github"></i>GitHub</a><a href="https://healix-prime.com" target="_blank"><i class="bi bi-box-arrow-up-right"></i>Live</a></div></div></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="project-card tilt-card"><div class="project-thumb">🧥</div><div class="project-body"><div class="project-tags"><span class="project-tag">Three.js</span><span class="project-tag">CSS3D</span><span class="project-tag">SVG</span></div><div class="project-title">3D Jacket Showcase</div><p class="project-desc">Nike-style jacket showcase with a 3D oval carousel, SVG illustrations and rich CSS animations.</p><div class="project-links"><a href="#"><i class="bi bi-github"></i>GitHub</a><a href="#"><i class="bi bi-box-arrow-up-right"></i>Demo</a></div></div></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="project-card tilt-card"><div class="project-thumb">🛒</div><div class="project-body"><div class="project-tags"><span class="project-tag">Laravel</span><span class="project-tag">Bootstrap</span><span class="project-tag">MySQL</span></div><div class="project-title">E-Commerce Platform</div><p class="project-desc">Full-stack ecommerce with catalog, cart, order management, and payment integration with admin dashboard.</p><div class="project-links"><a href="#"><i class="bi bi-github"></i>GitHub</a><a href="#"><i class="bi bi-box-arrow-up-right"></i>Live</a></div></div></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="project-card tilt-card"><div class="project-thumb">🔌</div><div class="project-body"><div class="project-tags"><span class="project-tag">Laravel API</span><span class="project-tag">Sanctum</span><span class="project-tag">REST</span></div><div class="project-title">RESTful API Service</div><p class="project-desc">Scalable RESTful API with Sanctum auth, resource transformers, rate limiting, and full documentation.</p><div class="project-links"><a href="#"><i class="bi bi-github"></i>GitHub</a><a href="#"><i class="bi bi-file-earmark-text"></i>Docs</a></div></div></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="project-card tilt-card"><div class="project-thumb">📊</div><div class="project-body"><div class="project-tags"><span class="project-tag">Laravel</span><span class="project-tag">Alpine.js</span><span class="project-tag">Charts</span></div><div class="project-title">Analytics Dashboard</div><p class="project-desc">Real-time analytics with dynamic charts, user tracking, revenue metrics and live notifications.</p><div class="project-links"><a href="#"><i class="bi bi-github"></i>GitHub</a><a href="#"><i class="bi bi-box-arrow-up-right"></i>Demo</a></div></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- EXPERIENCE -->
+<section id="experience">
+  <div class="container">
+    <div class="row gy-5">
+      <div class="col-lg-5 reveal">
+        <div class="section-tag">// my journey</div>
+        <h2 class="section-title">Experience &<br>Education</h2>
+        <div class="section-line"></div>
+        <p style="color:var(--muted);line-height:1.8">Building web applications with a focus on clean code, scalable architecture, and real-world impact.</p>
+      </div>
+      <div class="col-lg-7 reveal">
+        <div class="timeline">
+          <div class="timeline-item"><div class="tl-date">2023 — Present</div><div class="tl-role">Laravel Developer (Freelance)</div><div class="tl-company">Self-employed · Remote</div><p class="tl-desc">Building full-stack Laravel applications, REST APIs, payment integrations (SSLCommerz), and open-source packages.</p></div>
+          <div class="timeline-item"><div class="tl-date">2022 — 2023</div><div class="tl-role">Junior Web Developer</div><div class="tl-company">Tech Company · Bangladesh</div><p class="tl-desc">Developed and maintained PHP/Laravel applications, database design, Blade templating, and shared hosting deployments.</p></div>
+          <div class="timeline-item"><div class="tl-date">2019 — 2023</div><div class="tl-role">BSc in Computer Science</div><div class="tl-company">University · Bangladesh</div><p class="tl-desc">Core CS fundamentals — algorithms, databases, OOP, networking. Final-year project using Laravel REST API backend.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section id="testimonials">
+  <div class="container">
+    <div class="text-center mb-5 reveal"><div class="section-tag">// client feedback</div><h2 class="section-title">What Clients Say</h2></div>
+    <div class="row g-4">
+      <div class="col-lg-4 col-md-6 reveal"><div class="testimonial-card tilt-card"><div class="stars">★★★★★</div><p class="testimonial-text">"Emran delivered our healthcare platform ahead of schedule. The code quality was exceptional — clean architecture, well-commented, and easy to maintain. Highly recommended!"</p><div class="testimonial-author"><div class="author-avatar">RK</div><div><div class="author-name">Rafiq Khan</div><div class="author-role">CEO, MedTech BD</div></div></div></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="testimonial-card tilt-card"><div class="stars">★★★★★</div><p class="testimonial-text">"The SSLCommerz integration was flawless. Emran understood our requirements perfectly and built a robust payment system that handles thousands of transactions daily."</p><div class="testimonial-author"><div class="author-avatar">SM</div><div><div class="author-name">Sumaiya Mim</div><div class="author-role">Founder, EduPortal</div></div></div></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="testimonial-card tilt-card"><div class="stars">★★★★★</div><p class="testimonial-text">"Outstanding work on our REST API! The documentation was thorough, the endpoints were well-designed, and performance optimization made our app lightning fast."</p><div class="testimonial-author"><div class="author-avatar">TH</div><div><div class="author-name">Tanvir Hossain</div><div class="author-role">CTO, StartupBD</div></div></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- BLOG -->
+<section id="blog">
+  <div class="container">
+    <div class="text-center mb-5 reveal"><div class="section-tag">// thoughts & articles</div><h2 class="section-title">Latest Blog Posts</h2></div>
+    <div class="row g-4">
+      <div class="col-lg-4 col-md-6 reveal"><div class="blog-card tilt-card"><div class="blog-thumb">⚡</div><div class="blog-body"><div class="blog-meta"><span class="blog-cat">Laravel</span><span>Mar 28, 2024</span><span>5 min</span></div><div class="blog-title">Laravel 12 New Features You Need to Know</div><p class="blog-excerpt">Exploring the latest additions in Laravel 12 — improved performance, new Artisan commands, and cleaner syntax for modern PHP.</p><a href="#" class="blog-read">Read More <i class="bi bi-arrow-right"></i></a></div></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="blog-card tilt-card"><div class="blog-thumb">💳</div><div class="blog-body"><div class="blog-meta"><span class="blog-cat">Payment</span><span>Mar 10, 2024</span><span>8 min</span></div><div class="blog-title">SSLCommerz Integration in Laravel — Complete Guide</div><p class="blog-excerpt">Step-by-step guide to integrating SSLCommerz in your Laravel app with webhook handling and refund support.</p><a href="#" class="blog-read">Read More <i class="bi bi-arrow-right"></i></a></div></div></div>
+      <div class="col-lg-4 col-md-6 reveal"><div class="blog-card tilt-card"><div class="blog-thumb">📦</div><div class="blog-body"><div class="blog-meta"><span class="blog-cat">Packages</span><span>Feb 20, 2024</span><span>6 min</span></div><div class="blog-title">Building & Publishing Your First Laravel Package</div><p class="blog-excerpt">A practical walkthrough of creating a Laravel package from scratch and publishing to Packagist.</p><a href="#" class="blog-read">Read More <i class="bi bi-arrow-right"></i></a></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="container">
+    <div class="text-center mb-5 reveal"><div class="section-tag">// get in touch</div><h2 class="section-title">Let's Work Together</h2></div>
+    <div class="row g-4">
+      <div class="col-lg-5 reveal">
+        <p style="color:var(--muted);line-height:1.8;margin-bottom:2rem">Available for freelance projects, collaborations, or full-time opportunities. Drop me a message and let's build something great together.</p>
+        <div class="contact-info-item"><div class="contact-icon"><i class="bi bi-envelope"></i></div><div><div class="contact-label">Email</div><div class="contact-val">emran@example.com</div></div></div>
+        <div class="contact-info-item"><div class="contact-icon"><i class="bi bi-telephone"></i></div><div><div class="contact-label">Phone</div><div class="contact-val">+880 1XXX-XXXXXX</div></div></div>
+        <div class="contact-info-item"><div class="contact-icon"><i class="bi bi-geo-alt"></i></div><div><div class="contact-label">Location</div><div class="contact-val">Bangladesh 🇧🇩</div></div></div>
+        <div class="social-links mt-3">
+          <a href="#"><i class="bi bi-github"></i></a>
+          <a href="#"><i class="bi bi-linkedin"></i></a>
+          <a href="#"><i class="bi bi-twitter-x"></i></a>
+          <a href="#"><i class="bi bi-whatsapp"></i></a>
+        </div>
+      </div>
+      <div class="col-lg-7 reveal">
+        <div class="contact-form-wrap">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label-custom">Name</label><input type="text" class="form-control-custom" placeholder="Your name"></div>
+            <div class="col-md-6"><label class="form-label-custom">Email</label><input type="email" class="form-control-custom" placeholder="your@email.com"></div>
+            <div class="col-12"><label class="form-label-custom">Subject</label><input type="text" class="form-control-custom" placeholder="Project inquiry"></div>
+            <div class="col-12"><label class="form-label-custom">Message</label><textarea class="form-control-custom" placeholder="Tell me about your project..."></textarea></div>
+            <div class="col-12"><button class="btn btn-primary-custom w-100 btn-magnetic"><i class="bi bi-send me-2"></i>Send Message</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div><span style="color:var(--accent)">&lt;Emran /&gt;</span> &nbsp;·&nbsp; Laravel Developer</div>
+    <div><a href="#about">About</a> &nbsp;·&nbsp; <a href="#projects">Projects</a> &nbsp;·&nbsp; <a href="#contact">Contact</a></div>
+    <div>Designed & Built by Emran &nbsp;·&nbsp; <span style="color:var(--accent)">2024</span></div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* THREE.JS */
+(function(){
+  const canvas=document.getElementById('bg-canvas');
+  const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,2000);
+  camera.position.z=500;
+  const COUNT=2200, geo=new THREE.BufferGeometry();
+  const p=new Float32Array(COUNT*3), cl=new Float32Array(COUNT*3);
+  const c1=new THREE.Color('#00d2b4'),c2=new THREE.Color('#00aaff'),c3=new THREE.Color('#fff');
+  for(let i=0;i<COUNT;i++){
+    p[i*3]=(Math.random()-0.5)*1400;p[i*3+1]=(Math.random()-0.5)*1400;p[i*3+2]=(Math.random()-0.5)*900;
+    const t=Math.random(),c=t<0.5?c1.clone().lerp(c2,t*2):c2.clone().lerp(c3,(t-0.5)*2);
+    cl[i*3]=c.r*(0.3+Math.random()*0.7);cl[i*3+1]=c.g*(0.3+Math.random()*0.7);cl[i*3+2]=c.b*(0.3+Math.random()*0.7);
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(p,3));geo.setAttribute('color',new THREE.BufferAttribute(cl,3));
+  const mat=new THREE.PointsMaterial({size:2.2,vertexColors:true,transparent:true,opacity:0.65,sizeAttenuation:true});
+  const particles=new THREE.Points(geo,mat);scene.add(particles);
+  const lm=new THREE.LineBasicMaterial({color:0x00d2b4,transparent:true,opacity:0.06});
+  for(let i=0;i<80;i++){const a=Math.floor(Math.random()*COUNT)*3,b=Math.floor(Math.random()*COUNT)*3;scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p[a],p[a+1],p[a+2]),new THREE.Vector3(p[b],p[b+1],p[b+2])]),lm));}
+  let mx=0,my=0;
+  document.addEventListener('mousemove',e=>{mx=(e.clientX/window.innerWidth-0.5)*2;my=(e.clientY/window.innerHeight-0.5)*2;});
+  window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);});
+  let t=0;(function anim(){requestAnimationFrame(anim);t+=0.0003;particles.rotation.y=t+mx*0.12;particles.rotation.x=my*0.08;renderer.render(scene,camera);})();
+})();
+
+/* TYPED TEXT */
+(function(){
+  const texts=['Laravel Developer','Backend Engineer','PHP Specialist','API Architect','Package Builder'];
+  const el=document.getElementById('typedText');
+  let ti=0,ci=0,del=false;
+  function type(){
+    const cur=texts[ti];
+    if(!del){el.textContent=cur.slice(0,++ci);if(ci===cur.length){del=true;setTimeout(type,2200);return;}}
+    else{el.textContent=cur.slice(0,--ci);if(ci===0){del=false;ti=(ti+1)%texts.length;}}
+    setTimeout(type,del?55:90);
+  }type();
+})();
+
+/* CURSOR + TRAIL */
+(function(){
+  const dot=document.getElementById('cursorDot'),ring=document.getElementById('cursorRing');
+  document.addEventListener('mousemove',e=>{
+    dot.style.left=e.clientX+'px';dot.style.top=e.clientY+'px';
+    ring.style.left=e.clientX+'px';ring.style.top=e.clientY+'px';
+    const tr=document.createElement('div');
+    tr.style.cssText=`position:fixed;width:5px;height:5px;border-radius:50%;pointer-events:none;z-index:9997;left:${e.clientX}px;top:${e.clientY}px;background:var(--accent);transform:translate(-50%,-50%)`;
+    document.body.appendChild(tr);
+    tr.animate([{opacity:0.5,transform:'translate(-50%,-50%) scale(1)'},{opacity:0,transform:'translate(-50%,-50%) scale(0.1)'}],{duration:450,fill:'forwards'}).onfinish=()=>tr.remove();
+  });
+  document.querySelectorAll('a,button,.tilt-card,.skill-badge').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{ring.style.width='54px';ring.style.height='54px';ring.style.opacity='0.4';});
+    el.addEventListener('mouseleave',()=>{ring.style.width='36px';ring.style.height='36px';ring.style.opacity='1';});
+  });
+})();
+
+/* SCROLL REVEAL */
+(function(){
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('visible');
+        e.target.querySelectorAll('.skill-bar-fill').forEach(b=>{b.style.width=b.dataset.width+'%';});
+        e.target.querySelectorAll('.timeline-item').forEach((it,i)=>{setTimeout(()=>it.classList.add('visible'),i*200);});
+      }
+    });
+  },{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+  document.querySelectorAll('.timeline-item').forEach(el=>obs.observe(el));
+})();
+
+/* PARALLAX */
+(function(){
+  const layers=document.querySelectorAll('[data-parallax]');
+  window.addEventListener('scroll',()=>{layers.forEach(l=>{l.style.transform=`translateY(${window.scrollY*parseFloat(l.dataset.parallax)}px)`;});});
+})();
+
+/* 3D TILT */
+(function(){
+  document.querySelectorAll('.tilt-card').forEach(card=>{
+    card.addEventListener('mousemove',e=>{
+      const r=card.getBoundingClientRect();
+      const x=((e.clientX-r.left)/r.width-0.5)*18, y=-((e.clientY-r.top)/r.height-0.5)*18;
+      card.style.transform=`perspective(800px) rotateY(${x}deg) rotateX(${y}deg) translateZ(10px)`;
+    });
+    card.addEventListener('mouseleave',()=>{card.style.transform='perspective(800px) rotateY(0) rotateX(0) translateZ(0)';});
+  });
+})();
+
+/* MAGNETIC BUTTONS */
+(function(){
+  document.querySelectorAll('.btn-magnetic').forEach(btn=>{
+    btn.addEventListener('mousemove',e=>{
+      const r=btn.getBoundingClientRect();
+      const x=(e.clientX-r.left-r.width/2)*0.28, y=(e.clientY-r.top-r.height/2)*0.28;
+      btn.style.transform=`translate(${x}px,${y}px)`;
+    });
+    btn.addEventListener('mouseleave',()=>{btn.style.transform='translate(0,0)';});
+  });
+})();
+
+/* SCROLL PROGRESS */
+window.addEventListener('scroll',()=>{
+  const pct=(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight))*100;
+  document.getElementById('scroll-progress').style.width=pct+'%';
+  document.getElementById('back-top').classList.toggle('show',window.scrollY>500);
+});
+
+/* ACTIVE NAV */
+(function(){
+  const secs=document.querySelectorAll('section[id]'),links=document.querySelectorAll('.nav-link-custom');
+  window.addEventListener('scroll',()=>{
+    let cur='';secs.forEach(s=>{if(window.scrollY>=s.offsetTop-130)cur=s.id;});
+    links.forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+cur));
+  });
+})();
+
+/* ALPINE APP */
+function portfolioApp(){
+  return {
+    lightMode:false, navOpen:false,
+    counters:{projects:0,years:0,clients:0},
+    init(){
+      this.animateCounters();
+      document.querySelectorAll('.nav-link-custom').forEach(l=>l.addEventListener('click',()=>{this.navOpen=false;}));
+    },
+    animateCounters(){
+      const targets={projects:20,years:3,clients:15},start=Date.now();
+      const tick=()=>{
+        const pr=Math.min((Date.now()-start)/2000,1),e=1-Math.pow(1-pr,3);
+        this.counters.projects=Math.floor(e*targets.projects);this.counters.years=Math.floor(e*targets.years);this.counters.clients=Math.floor(e*targets.clients);
+        if(pr<1)requestAnimationFrame(tick);else Object.assign(this.counters,targets);
+      };
+      setTimeout(()=>requestAnimationFrame(tick),1200);
+    }
+  }
+}
+</script>
+</body>
+</html>
